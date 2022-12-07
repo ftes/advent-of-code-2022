@@ -1,0 +1,248 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 05
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Puzzle1 do
+  def parse(string) do
+    [start, steps] = String.split(string, "\n\n")
+    {parse_start(start), parse_steps(steps)}
+  end
+
+  def execute({stacks, []}), do: stacks
+
+  def execute({stacks, [step | steps]}) do
+    new_stacks = execute_step(stacks, step)
+    execute({new_stacks, steps})
+  end
+
+  def top(stacks) do
+    stacks
+    |> Enum.map(&hd/1)
+    |> Enum.join()
+  end
+
+  defp parse_start(string) do
+    [count_line | lines] =
+      string
+      |> String.split("\n")
+      |> Enum.reverse()
+
+    count = String.split(count_line, " ") |> length()
+
+    for line <- lines, reduce: initial_stacks(count) do
+      stacks ->
+        items =
+          line
+          |> String.graphemes()
+          |> Enum.chunk_every(4)
+          |> Enum.map(fn item -> Enum.at(item, 1) end)
+
+        Enum.zip(stacks, items)
+        |> Enum.map(&add_item/1)
+    end
+  end
+
+  defp parse_steps(string) do
+    string
+    |> String.split("\n")
+    |> Enum.map(&parse_step/1)
+  end
+
+  defp parse_step(string) do
+    ~r/^move (?<count>[0-9]+) from (?<from>[0-9]+) to (?<to>[0-9]+)$/
+    |> Regex.named_captures(string)
+    |> Map.new(fn {k, v} -> {String.to_atom(k), String.to_integer(v)} end)
+  end
+
+  defp initial_stacks(count) do
+    List.duplicate([], count)
+  end
+
+  defp add_item({stack, " "}), do: stack
+  defp add_item({stack, item}), do: [item | stack]
+
+  defp execute_step(stacks, %{count: count, from: from, to: to}) do
+    {move, from_stack} =
+      stacks
+      |> Enum.at(from - 1)
+      |> Enum.split(count)
+
+    to_stack = Enum.reverse(move) ++ Enum.at(stacks, to - 1)
+
+    stacks
+    |> List.replace_at(from - 1, from_stack)
+    |> List.replace_at(to - 1, to_stack)
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Puzzle1.parse()
+|> Puzzle1.execute()
+|> Puzzle1.top()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+warning: variable "stacks" is unused (if the variable is not meant to be used, prefix it with an underscore)
+  #cell:bjwecjdgdhehqe55r53gpotdcgh37ged:83
+
+warning: Passing arity-1 function to Kino.animate/3 is deprecated, please use Kino.animate/2 or pass an arity-2 function
+  (kino 0.7.0) lib/kino.ex:253: Kino.animate/3
+  (elixir 1.14.0) src/elixir.erl:298: anonymous fn/4 in :elixir.eval_external_handler/1
+  (stdlib 4.0.1) erl_eval.erl:748: :erl_eval.do_apply/7
+  (elixir 1.14.0) src/elixir.erl:288: :elixir.eval_forms/3
+  (elixir 1.14.0) lib/module/parallel_checker.ex:100: Module.ParallelChecker.verify/1
+  lib/livebook/runtime/evaluator.ex:430: Livebook.Runtime.Evaluator.eval/3
+
+```
+
+## Part 1 - animated
+
+````elixir
+defmodule Puzzle1Animation do
+  def execute(_el, {_stacks, []}), do: :halt
+  def execute(el, {stacks, [%{count: 0} | steps]}), do: execute(el, {stacks, steps})
+
+  def execute(_el, {stacks, [%{count: count, from: from, to: to} = step | steps]}) do
+    [move | from_stack] = Enum.at(stacks, from - 1)
+    to_stack = [move | Enum.at(stacks, to - 1)]
+
+    new_stacks =
+      stacks
+      |> List.replace_at(from - 1, from_stack)
+      |> List.replace_at(to - 1, to_stack)
+
+    new_state = {new_stacks, [%{step | count: count - 1} | steps]}
+
+    {:cont, render(new_state), new_state}
+  end
+
+  def render({stacks, _}) do
+    lines =
+      stacks
+      |> Enum.map(&Enum.reverse/1)
+      |> Enum.with_index(1)
+      |> Enum.map(fn {line, i} -> "#{i} #{line}" end)
+      |> Enum.join("\n")
+
+    Kino.Markdown.new("```\n#{lines}\n```")
+  end
+end
+
+state =
+  input
+  |> Kino.Input.read()
+  |> Puzzle1.parse()
+
+Kino.animate(10, state, &Puzzle1Animation.execute/2)
+````
+
+## Part 2
+
+```elixir
+defmodule Puzzle2 do
+  def parse(string) do
+    [start, steps] = String.split(string, "\n\n")
+    {parse_start(start), parse_steps(steps)}
+  end
+
+  def execute({stacks, []}), do: stacks
+
+  def execute({stacks, [step | steps]}) do
+    new_stacks = execute_step(stacks, step)
+    execute({new_stacks, steps})
+  end
+
+  def top(stacks) do
+    stacks
+    |> Enum.map(&hd/1)
+    |> Enum.join()
+  end
+
+  defp parse_start(string) do
+    [count_line | lines] =
+      string
+      |> String.split("\n")
+      |> Enum.reverse()
+
+    count = String.split(count_line, " ") |> length()
+
+    for line <- lines, reduce: initial_stacks(count) do
+      stacks ->
+        items =
+          line
+          |> String.graphemes()
+          |> Enum.chunk_every(4)
+          |> Enum.map(fn item -> Enum.at(item, 1) end)
+
+        Enum.zip(stacks, items)
+        |> Enum.map(&add_item/1)
+    end
+  end
+
+  defp parse_steps(string) do
+    string
+    |> String.split("\n")
+    |> Enum.map(&parse_step/1)
+  end
+
+  defp parse_step(string) do
+    ~r/^move (?<count>[0-9]+) from (?<from>[0-9]+) to (?<to>[0-9]+)$/
+    |> Regex.named_captures(string)
+    |> Map.new(fn {k, v} -> {String.to_atom(k), String.to_integer(v)} end)
+  end
+
+  defp initial_stacks(count) do
+    List.duplicate([], count)
+  end
+
+  defp add_item({stack, " "}), do: stack
+  defp add_item({stack, item}), do: [item | stack]
+
+  defp execute_step(stacks, %{count: count, from: from, to: to}) do
+    {move, from_stack} =
+      stacks
+      |> Enum.at(from - 1)
+      |> Enum.split(count)
+
+    to_stack = move ++ Enum.at(stacks, to - 1)
+
+    stacks
+    |> List.replace_at(from - 1, from_stack)
+    |> List.replace_at(to - 1, to_stack)
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Puzzle2.parse()
+|> Puzzle2.execute()
+|> Puzzle2.top()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"WDLPFNNNB"
+```

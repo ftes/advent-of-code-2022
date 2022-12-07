@@ -1,0 +1,160 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 07
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule FileSystem1 do
+  def parse(lines), do: parse_lines({%{}, []}, lines)
+
+  defp parse_lines({tree, _}, []), do: tree
+
+  defp parse_lines(state, [line | lines]) do
+    state
+    |> parse_line(line)
+    |> parse_lines(lines)
+  end
+
+  defp parse_line(state, "$ ls"), do: state
+
+  defp parse_line({tree, path}, "$ cd .."), do: {tree, tl(path)}
+
+  defp parse_line({tree, _}, "$ cd /"), do: {tree, []}
+
+  defp parse_line({tree, path}, <<"$ cd ", dir::binary>>), do: {tree, [dir | path]}
+
+  defp parse_line({tree, path}, <<"dir ", dir::binary>>) do
+    {put_in(tree, Enum.reverse([dir | path]), %{}), path}
+  end
+
+  defp parse_line({tree, path}, file_line) do
+    %{"size" => size, "file" => file} =
+      ~r/^(?<size>[0-9]+) (?<file>.+)$/
+      |> Regex.named_captures(file_line)
+
+    size = String.to_integer(size)
+    {put_in(tree, Enum.reverse([file | path]), {:file, size}), path}
+  end
+end
+
+defmodule FileSizeSum1 do
+  def sum({:file, size}), do: size
+
+  def sum(tree) do
+    for {_, sub_tree} <- tree, reduce: 0 do
+      acc -> acc + sum(sub_tree)
+    end
+  end
+end
+
+defmodule DirSizeWithMaxSum1 do
+  @max 100_000
+
+  def sum({:file, _}), do: 0
+
+  def sum(tree) do
+    sum = tree |> Map.values() |> Enum.map(&sum/1) |> Enum.sum()
+    size = size(tree)
+
+    sum + if size > @max, do: 0, else: size
+  end
+
+  def size({:file, size}), do: size
+
+  def size(tree) do
+    tree |> Map.values() |> Enum.map(&size/1) |> Enum.sum()
+  end
+end
+
+sum_1 =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> FileSystem1.parse()
+  |> DirSizeWithMaxSum1.sum()
+
+defmodule DirSizes1 do
+  def dir_sizes({:file, _}), do: []
+
+  def dir_sizes(tree) do
+    child_sizes =
+      tree
+      |> Map.values()
+      |> Enum.map(&dir_sizes/1)
+      |> List.flatten()
+
+    [size(tree) | child_sizes]
+  end
+
+  def size({:file, size}), do: size
+
+  def size(tree) do
+    tree |> Map.values() |> Enum.map(&size/1) |> Enum.sum()
+  end
+end
+
+sum_1b =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> FileSystem1.parse()
+  |> DirSizes2.dir_sizes()
+  |> Enum.filter(&(&1 < 100_000))
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+919137
+```
+
+## Part 2
+
+```elixir
+defmodule SelectDir2 do
+  @disk 70_000_000
+  @required 30_000_000
+
+  def select(tree) do
+    total = DirSizes1.size(tree)
+    free = @disk - total
+    missing = @required - free
+
+    tree
+    |> DirSizes2.dir_sizes()
+    |> Enum.sort()
+    |> Enum.find(&(&1 > missing))
+  end
+end
+
+selected_2 =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> FileSystem1.parse()
+  |> SelectDir2.select()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+2877389
+```

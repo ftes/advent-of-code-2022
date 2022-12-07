@@ -1,0 +1,100 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 03
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Rucksack1 do
+  def parse(string) do
+    length = String.length(string)
+    items = String.to_charlist(string)
+    {comp_1, comp_2} = Enum.split(items, div(length, 2))
+    {MapSet.new(comp_1), MapSet.new(comp_2)}
+  end
+
+  def duplicate({comp_1, comp_2}) do
+    [dup] =
+      MapSet.intersection(comp_1, comp_2)
+      |> MapSet.to_list()
+
+    dup
+  end
+
+  def priority(char) when char >= 65 and char <= 90, do: char - 38
+  def priority(char), do: char - 96
+end
+
+priority_sum_1 =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(&Rucksack1.parse/1)
+  |> Enum.map(&Rucksack1.duplicate/1)
+  |> Enum.map(&Rucksack1.priority/1)
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+8252
+```
+
+## Part 2
+
+```elixir
+defmodule Rucksack2 do
+  def parse(strings) do
+    strings
+    |> Enum.map(&String.to_charlist/1)
+    |> Enum.map(&MapSet.new(&1))
+    |> List.to_tuple()
+  end
+
+  def common({a, b, c}) do
+    [common] =
+      a
+      |> MapSet.intersection(b)
+      |> MapSet.intersection(c)
+      |> MapSet.to_list()
+
+    common
+  end
+
+  def priority(char) when char >= 65 and char <= 90, do: char - 38
+  def priority(char), do: char - 96
+end
+
+priority_sum_1 =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.chunk_every(3)
+  |> Enum.map(&Rucksack2.parse/1)
+  |> Enum.map(&Rucksack2.common/1)
+  |> Enum.map(&Rucksack2.priority/1)
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+2828
+```

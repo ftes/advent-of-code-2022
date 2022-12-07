@@ -1,0 +1,75 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 01
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+Resolving Hex dependencies...
+Dependency resolution completed:
+New:
+  kino 0.7.0
+  table 0.1.2
+* Getting kino (Hex package)
+* Getting table (Hex package)
+==> table
+Compiling 5 files (.ex)
+Generated table app
+==> kino
+Compiling 36 files (.ex)
+Generated kino app
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+elves =
+  Kino.Input.read(input)
+  |> String.split("\n\n")
+  |> Enum.map(&String.split(&1, "\n"))
+  |> Enum.map(&Enum.map(&1, fn s -> String.to_integer(s) end))
+
+max =
+  elves
+  |> Enum.map(&Enum.sum/1)
+  |> Enum.max()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+71502
+```
+
+## Part 2
+
+```elixir
+max_3 =
+  elves
+  |> Enum.map(&Enum.sum/1)
+  |> Enum.sort(:desc)
+  |> Enum.take(3)
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+208191
+```

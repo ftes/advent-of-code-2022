@@ -1,0 +1,115 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 04
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Pair1 do
+  def parse(line) do
+    line
+    |> String.split(",")
+    |> Enum.map(&parse_single/1)
+    |> List.to_tuple()
+  end
+
+  def contain?({a, b}) do
+    contain_uni?(a, b) || contain_uni?(b, a)
+  end
+
+  defp parse_single(single) do
+    single
+    |> String.split("-")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
+  end
+
+  defp contain_uni?({from_a, to_a}, {from_b, to_b}) do
+    from_a <= from_b and to_a >= to_b
+  end
+end
+
+contained =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(&Pair1.parse/1)
+  |> Enum.map(&Pair1.contain?/1)
+  |> Enum.count(& &1)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+657
+```
+
+## Part 2
+
+```elixir
+defmodule Pair2 do
+  def parse(line) do
+    line
+    |> String.split(",")
+    |> Enum.map(&parse_single/1)
+    |> List.to_tuple()
+  end
+
+  def overlap?({a, b}) do
+    overlap_uni?(a, b) || overlap_uni?(b, a)
+  end
+
+  defp parse_single(single) do
+    single
+    |> String.split("-")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
+  end
+
+  defp overlap_uni?(a, b) do
+    contain_uni?(a, b) || start_in_uni?(a, b) || end_in_uni?(a, b)
+  end
+
+  defp contain_uni?({from_a, to_a}, {from_b, to_b}) do
+    from_a <= from_b and to_a >= to_b
+  end
+
+  defp start_in_uni?({from_a, to_a}, {from_b, _to_b}) do
+    from_b in from_a..to_a
+  end
+
+  defp end_in_uni?({from_a, to_a}, {_from_b, to_b}) do
+    to_b in from_a..to_a
+  end
+end
+
+contained =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n")
+  |> Enum.map(&Pair2.parse/1)
+  |> Enum.map(&Pair2.overlap?/1)
+  |> Enum.count(& &1)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+938
+```

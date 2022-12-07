@@ -1,0 +1,128 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 02
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule RPS1.Round do
+  def points(string) do
+    [them, me] =
+      string
+      |> String.split(" ")
+      |> Enum.map(&parse/1)
+
+    points_outcome(outcome(them, me)) + points_shape(me)
+  end
+
+  defp parse("A"), do: :rock
+  defp parse("X"), do: :rock
+  defp parse("B"), do: :paper
+  defp parse("Y"), do: :paper
+  defp parse("C"), do: :scissors
+  defp parse("Z"), do: :scissors
+
+  defp outcome(other, me)
+  defp outcome(:rock, :paper), do: :win
+  defp outcome(:scissors, :rock), do: :win
+  defp outcome(:paper, :scissors), do: :win
+  defp outcome(x, x), do: :draw
+  defp outcome(_, _), do: :lose
+
+  defp points_outcome(:lose), do: 0
+  defp points_outcome(:draw), do: 3
+  defp points_outcome(:win), do: 6
+
+  defp points_shape(:rock), do: 1
+  defp points_shape(:paper), do: 2
+  defp points_shape(:scissors), do: 3
+end
+
+# RPS.Round.points("A Y")
+# RPS.Round.points("B X")
+# RPS.Round.points("C Z")
+
+sum1 =
+  Kino.Input.read(input)
+  |> String.split("\n")
+  |> Enum.map(&RPS1.Round.points/1)
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+8392
+```
+
+## Part 2
+
+```elixir
+defmodule RPS2.Round do
+  def points(string) do
+    [them, outcome] =
+      string
+      |> String.split(" ")
+      |> Enum.map(&parse/1)
+
+    me = shape(them, outcome)
+    points_outcome(outcome) + points_shape(me)
+  end
+
+  defp parse("A"), do: :rock
+  defp parse("B"), do: :paper
+  defp parse("C"), do: :scissors
+
+  defp parse("X"), do: :lose
+  defp parse("Y"), do: :draw
+  defp parse("Z"), do: :win
+
+  defp shape(x, :draw), do: x
+  defp shape(:rock, :win), do: :paper
+  defp shape(:paper, :win), do: :scissors
+  defp shape(:scissors, :win), do: :rock
+  defp shape(:rock, :lose), do: :scissors
+  defp shape(:paper, :lose), do: :rock
+  defp shape(:scissors, :lose), do: :paper
+
+  defp points_outcome(:lose), do: 0
+  defp points_outcome(:draw), do: 3
+  defp points_outcome(:win), do: 6
+
+  defp points_shape(:rock), do: 1
+  defp points_shape(:paper), do: 2
+  defp points_shape(:scissors), do: 3
+end
+
+# RPS2.Round.points("A Y")
+# RPS2.Round.points("B X")
+# RPS2.Round.points("C Z")
+
+sum2 =
+  Kino.Input.read(input)
+  |> String.split("\n")
+  |> Enum.map(&RPS2.Round.points/1)
+  |> Enum.sum()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+10116
+```

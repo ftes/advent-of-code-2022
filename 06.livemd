@@ -1,0 +1,96 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 06
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"}
+])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Comm1 do
+  def find_marker(string, i \\ 4)
+
+  def find_marker("", _), do: -1
+
+  def find_marker(string, i) do
+    start = String.slice(string, 0..3)
+    freq = start |> String.graphemes() |> Enum.frequencies()
+
+    case map_size(freq) do
+      4 -> i
+      _ -> find_marker(String.slice(string, 1..-1), i + 1)
+    end
+  end
+end
+
+defmodule Comm1b do
+  def find_marker(string, i \\ 4)
+
+  def find_marker(<<a::utf8, b::utf8, c::utf8, d::utf8, _::binary>>, i)
+      when a != b and a != c and a != d and b != c and b != d and c != d do
+    i
+  end
+
+  def find_marker(<<_::utf8, b::utf8, c::utf8, d::utf8, rest::binary>>, i) do
+    find_marker(<<b, c, d>> <> rest, i + 1)
+  end
+
+  def find_marker(_, _), do: -1
+end
+
+input
+|> Kino.Input.read()
+|> Comm1b.find_marker()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+1361
+```
+
+## Part 2
+
+```elixir
+defmodule Comm2 do
+  @size 14
+
+  def find_message(string, i \\ @size)
+
+  def find_message("", _), do: -1
+
+  def find_message(string, i) do
+    start = String.slice(string, 0..(@size - 1))
+    freq = start |> String.graphemes() |> Enum.frequencies()
+
+    case map_size(freq) do
+      @size -> i
+      _ -> find_message(String.slice(string, 1..-1), i + 1)
+    end
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Comm2.find_message()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+3263
+```
