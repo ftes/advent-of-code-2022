@@ -11,6 +11,24 @@ Mix.install([
 <!-- livebook:{"output":true} -->
 
 ```
+Resolving Hex dependencies...
+Dependency resolution completed:
+New:
+  kino 0.7.0
+  table 0.1.2
+* Getting kino (Hex package)
+* Getting table (Hex package)
+==> table
+Compiling 5 files (.ex)
+Generated table app
+==> kino
+Compiling 36 files (.ex)
+Generated kino app
+```
+
+<!-- livebook:{"output":true} -->
+
+```
 :ok
 ```
 
@@ -99,22 +117,6 @@ input
 |> Puzzle1.parse()
 |> Puzzle1.execute()
 |> Puzzle1.top()
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-warning: variable "stacks" is unused (if the variable is not meant to be used, prefix it with an underscore)
-  #cell:bjwecjdgdhehqe55r53gpotdcgh37ged:83
-
-warning: Passing arity-1 function to Kino.animate/3 is deprecated, please use Kino.animate/2 or pass an arity-2 function
-  (kino 0.7.0) lib/kino.ex:253: Kino.animate/3
-  (elixir 1.14.0) src/elixir.erl:298: anonymous fn/4 in :elixir.eval_external_handler/1
-  (stdlib 4.0.1) erl_eval.erl:748: :erl_eval.do_apply/7
-  (elixir 1.14.0) src/elixir.erl:288: :elixir.eval_forms/3
-  (elixir 1.14.0) lib/module/parallel_checker.ex:100: Module.ParallelChecker.verify/1
-  lib/livebook/runtime/evaluator.ex:430: Livebook.Runtime.Evaluator.eval/3
-
 ```
 
 ## Part 1 - animated
