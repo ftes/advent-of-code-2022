@@ -1,0 +1,152 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 13
+
+```elixir
+Mix.install(
+  [
+    {:kino, "~> 0.7.0"},
+    {:vega_lite, "~> 0.1.6"},
+    {:kino_vega_lite, "~> 0.1.7"}
+  ],
+  consolidate_protocols: false
+)
+
+alias VegaLite, as: Vl
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+VegaLite
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Parser do
+  def parse_pairs(string) do
+    for pair <- String.split(string, "\n\n") do
+      for line <- String.split(pair, "\n") do
+        parse_line(line)
+      end
+      |> List.to_tuple()
+    end
+  end
+
+  def parse_all(string) do
+    for line <- String.split(string, "\n"), line != "" do
+      parse_line(line)
+    end
+  end
+
+  defp parse_line(string) do
+    # Alternative: Code.eval_string()
+    {list, ""} = parse_element(string)
+    list
+  end
+
+  defp parse_token(<<n1, n2, r::binary>>) when n1 in ?0..?9 and n2 in ?0..?9,
+    do: {(n1 - ?0) * 10 + n2 - ?0, r}
+
+  defp parse_token(<<n, r::binary>>) when n in ?0..?9, do: {n - ?0, r}
+  defp parse_token(<<other, r::binary>>), do: {other, r}
+
+  defp parse_list(string, acc \\ []) do
+    case parse_element(string) do
+      {?], rest} -> {Enum.reverse(acc), rest}
+      {?,, rest} -> parse_list(rest, acc)
+      {value, rest} -> parse_list(rest, [value | acc])
+    end
+  end
+
+  defp parse_element(string) do
+    case parse_token(string) do
+      {?[, rest} -> parse_list(rest)
+      {other, rest} -> {other, rest}
+    end
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Parser, <<70, 79, 82, 49, 0, 0, 15, ...>>, {:parse_element, 1}}
+```
+
+```elixir
+defmodule Compare1 do
+  def compare_all(pairs) do
+    pairs
+    |> Enum.with_index(1)
+    |> Enum.filter(fn {{x, y}, _} -> compare(x, y) end)
+    |> Enum.map(&elem(&1, 1))
+    |> Enum.sum()
+  end
+
+  def explain_all(pairs) do
+    pairs
+    |> Enum.map(fn {x, y} -> compare(x, y) end)
+  end
+
+  def compare(x, x) when is_integer(x), do: :continue
+  def compare(x, y) when is_integer(x) and is_integer(y) and x < y, do: true
+  def compare(x, y) when is_integer(x) and is_integer(y) and x > y, do: false
+
+  def compare([], []), do: :continue
+  def compare([], [_ | _]), do: true
+  def compare([_ | _], []), do: false
+
+  def compare([x | x_rest], [y | y_rest]) do
+    case compare(x, y) do
+      :continue -> compare(x_rest, y_rest)
+      decision -> decision
+    end
+  end
+
+  def compare(x, y) when is_integer(x), do: compare([x], y)
+  def compare(x, y) when is_integer(y), do: compare(x, [y])
+end
+
+input |> Kino.Input.read() |> Parser.parse_pairs() |> Compare1.compare_all()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+5003
+```
+
+## Part 2
+
+```elixir
+defmodule Sorter2 do
+  @divider_1 [[2]]
+  @divider_2 [[6]]
+
+  def sort(packets) do
+    [@divider_1, @divider_2 | packets]
+    |> Enum.sort(&Compare1.compare/2)
+  end
+
+  def decoder_key(packets) do
+    sorted = packets |> sort()
+    i1 = Enum.find_index(sorted, &(&1 == @divider_1)) + 1
+    i2 = Enum.find_index(sorted, &(&1 == @divider_2)) + 1
+    i1 * i2
+  end
+end
+
+input |> Kino.Input.read() |> Parser.parse_all() |> Sorter2.decoder_key()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+20280
+```

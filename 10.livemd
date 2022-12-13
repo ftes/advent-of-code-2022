@@ -1,0 +1,121 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 10
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"},
+  {:vega_lite, "~> 0.1.6"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+
+alias VegaLite, as: Vl
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+VegaLite
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Cpu1 do
+  def parse(string) do
+    string
+    |> String.split("\n")
+    |> Enum.flat_map(&parse_line/1)
+  end
+
+  def parse_line(<<"addx ", rest::binary>>), do: [:noop, {:addx, String.to_integer(rest)}]
+  def parse_line("noop"), do: [:noop]
+
+  def eval(commands, x \\ 1, i \\ 1, acc \\ 0)
+
+  def eval([], _, _, acc), do: acc
+
+  def eval([command | commands], x, i, acc) do
+    acc = add_acc(acc, x, i)
+    x = eval_single(command, x)
+    eval(commands, x, i + 1, acc)
+  end
+
+  def eval_single(:noop, x), do: x
+  def eval_single({:addx, d}, x), do: x + d
+
+  def add_acc(acc, x, i) when rem(i - 20, 40) == 0, do: acc + x * i
+  def add_acc(acc, _, _), do: acc
+end
+
+input
+|> Kino.Input.read()
+|> Cpu1.parse()
+|> Cpu1.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+12740
+```
+
+## Part 2
+
+```elixir
+defmodule Cpu2 do
+  def eval(commands, x \\ 1, i \\ 1, acc \\ "")
+
+  def eval([], _, _, acc), do: acc
+
+  def eval([command | commands], x, i, acc) do
+    # runtime should optimize binary appends
+    # https://www.erlang.org/doc/efficiency_guide/binaryhandling.html
+    acc = acc <> pixel(x, i) <> newline(i)
+    x = eval_single(command, x)
+    eval(commands, x, i + 1, acc)
+  end
+
+  def eval_single(:noop, x), do: x
+  def eval_single({:addx, d}, x), do: x + d
+
+  def pixel(sprite_x, i) do
+    x = rem(i - 1, 40)
+
+    if Enum.member?((sprite_x - 1)..(sprite_x + 1), x),
+      do: "##",
+      else: "  "
+  end
+
+  def newline(i) when rem(i, 40) == 0, do: "\n"
+  def newline(_), do: ""
+end
+
+input
+|> Kino.Input.read()
+|> Cpu1.parse()
+|> Cpu2.eval()
+|> IO.puts()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+######    ######    ######      ####    ######      ####      ####    ########  
+##    ##  ##    ##  ##    ##  ##    ##  ##    ##  ##    ##  ##    ##  ##        
+##    ##  ######    ##    ##  ##    ##  ##    ##  ##    ##  ##        ######    
+######    ##    ##  ######    ########  ######    ########  ##  ####  ##        
+##  ##    ##    ##  ##        ##    ##  ##  ##    ##    ##  ##    ##  ##        
+##    ##  ######    ##        ##    ##  ##    ##  ##    ##    ######  ##        
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
+```

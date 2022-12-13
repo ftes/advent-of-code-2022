@@ -1,0 +1,219 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 12
+
+```elixir
+Mix.install(
+  [
+    {:kino, "~> 0.7.0"},
+    {:vega_lite, "~> 0.1.6"},
+    {:kino_vega_lite, "~> 0.1.7"}
+  ],
+  consolidate_protocols: false
+)
+
+alias VegaLite, as: Vl
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+VegaLite
+```
+
+## Part 1
+
+```elixir
+input = Kino.Input.textarea("Input")
+```
+
+```elixir
+defmodule Parser do
+  def parse(string) do
+    for {line, y} <- String.split(string, "\n") |> Enum.with_index(),
+        {char, x} <- String.to_charlist(line) |> Enum.with_index(1),
+        reduce: {nil, nil, %{}} do
+      {start, goal, map} ->
+        case char do
+          ?S -> {{x, y}, goal, Map.put(map, {x, y}, ?a)}
+          ?E -> {start, {x, y}, Map.put(map, {x, y}, ?z)}
+          _ -> {start, goal, Map.put(map, {x, y}, char)}
+        end
+    end
+  end
+end
+
+defmodule Navigate1 do
+  def eval({start, goal, map}) do
+    dijkstra([start], map, %{start => 0}, :up)
+    |> Map.get(goal)
+  end
+
+  # simple: queue is a priority queue, because distance increases monotonically
+  def dijkstra(queue, map, distances, direction)
+
+  def dijkstra([], _map, distances, _direction), do: distances
+
+  def dijkstra([current | tail], map, distances, direction) do
+    distance = distances[current]
+
+    next =
+      [{-1, 0}, {1, 0}, {0, -1}, {0, 1}]
+      |> Enum.map(&add(&1, current))
+      |> Enum.filter(&Map.has_key?(map, &1))
+      |> Enum.filter(&reachable?(map, current, &1, direction))
+      |> Enum.filter(&(distance + 1 < distances[&1]))
+
+    distances = Map.merge(distances, Map.from_keys(next, distance + 1))
+    dijkstra(tail ++ next, map, distances, direction)
+  end
+
+  def add({x1, y1}, {x2, y2}), do: {x1 + x2, y1 + y2}
+  def reachable?(map, from, to, :up), do: map[to] - map[from] <= 1
+  def reachable?(map, to, from, :down), do: reachable?(map, from, to, :up)
+end
+
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Navigate1.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+437
+```
+
+## Part 2
+
+```elixir
+defmodule Navigate2 do
+  def eval({_start, goal, map}) do
+    Navigate1.dijkstra([goal], map, %{goal => 0}, :down)
+    |> Enum.filter(fn {point, _} -> map[point] == ?a end)
+    |> Enum.map(fn {_, distance} -> distance end)
+    |> Enum.sort()
+    |> Enum.at(0)
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Navigate2.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+430
+```
+
+```elixir
+defmodule Dijkstra do
+  def with_getters(start, get_neighbours, get_distance) do
+    dist = %{start => 0}
+    q = PrioQ.new([{0, start}])
+    prev = %{}
+
+    dijkstra(q, dist, prev, get_neighbours, get_distance)
+  end
+
+  def dijkstra(q, dist, prev, get_neighbours, get_distance) do
+    case q |> PrioQ.take_smallest() |> check_outdated(dist) do
+      :empty ->
+        {dist, prev}
+
+      :outdated ->
+        dijkstra(q, dist, prev, get_neighbours, get_distance)
+
+      {u, q} ->
+        {dist, prev, q} =
+          for v <- get_neighbours.(u),
+              reduce: {dist, prev, q} do
+            {dist, prev, q} ->
+              alt = dist[u] + get_distance.(u, v)
+
+              if alt < dist[v],
+                do: {Map.put(dist, v, alt), Map.put(prev, v, u), PrioQ.put(q, v, alt)},
+                else: {dist, prev, q}
+          end
+
+        dijkstra(q, dist, prev, get_neighbours, get_distance)
+    end
+  end
+
+  def check_outdated({{prio, u}, q}, dist) do
+    if prio == dist[u], do: {u, q}, else: :outdated
+  end
+
+  def check_outdated(other, _), do: other
+end
+
+defmodule PrioQ do
+  defstruct [:set]
+
+  def new(), do: %__MODULE__{set: :gb_sets.empty()}
+  def new([]), do: new()
+  def new([{_prio, _elem} | _] = list), do: %__MODULE__{set: :gb_sets.from_list(list)}
+
+  def put(%__MODULE__{} = q, elem, prio) do
+    %{q | set: :gb_sets.add({prio, elem}, q.set)}
+  end
+
+  def size(%__MODULE__{} = q) do
+    :gb_sets.size(q.set)
+  end
+
+  def take_smallest(%__MODULE__{} = q) do
+    case :gb_sets.size(q.set) do
+      0 ->
+        :empty
+
+      _else ->
+        {{prio, elem}, set} = :gb_sets.take_smallest(q.set)
+        {{prio, elem}, %{q | set: set}}
+    end
+  end
+
+  defimpl Inspect do
+    import Inspect.Algebra
+
+    def inspect(%PrioQ{} = q, opts) do
+      concat(["#PrioQ.new(", to_doc(:gb_sets.to_list(q.set), opts), ")"])
+    end
+  end
+end
+
+defmodule Navigate2b do
+  def eval({_start, goal, map}) do
+    get_distance = fn _, _ -> 1 end
+
+    get_neighbours = fn node ->
+      [{-1, 0}, {1, 0}, {0, -1}, {0, 1}]
+      |> Enum.map(&Navigate1.add(node, &1))
+      |> Enum.filter(&Map.has_key?(map, &1))
+      |> Enum.filter(&Navigate1.reachable?(map, node, &1, :down))
+    end
+
+    Dijkstra.with_getters(goal, get_neighbours, get_distance)
+    |> elem(0)
+    |> Enum.filter(fn {point, _} -> map[point] == ?a end)
+    |> Enum.map(fn {_, distance} -> distance end)
+    |> Enum.sort()
+    |> Enum.at(0)
+  end
+end
+
+input
+|> Kino.Input.read()
+|> Parser.parse()
+|> Navigate2b.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+430
+```

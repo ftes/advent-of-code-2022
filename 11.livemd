@@ -1,0 +1,181 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# 11
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.7.0"},
+  {:vega_lite, "~> 0.1.6"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
+
+alias VegaLite, as: Vl
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+VegaLite
+```
+
+## Part 1
+
+```elixir
+# monkeys = [
+#   %{items: [79,98],       op: & &1*19, div: 23, true: 2, false: 3},
+#   %{items: [54,65,75,74], op: & &1+6,  div: 19, true: 2, false: 0},
+#   %{items: [79,60,97],    op: & &1*&1, div: 13, true: 1, false: 3},
+#   %{items: [74],          op: & &1+3,  div: 17, true: 0, false: 1},
+# ]
+
+monkeys = [
+  %{items: [84, 72, 58, 51], op: &(&1 * 3), div: 13, true: 1, false: 7},
+  %{items: [88, 58, 58], op: &(&1 + 8), div: 2, true: 7, false: 5},
+  %{items: [93, 82, 71, 77, 83, 53, 71, 89], op: &(&1 * &1), div: 7, true: 3, false: 4},
+  %{items: [81, 68, 65, 81, 73, 77, 96], op: &(&1 + 2), div: 17, true: 4, false: 6},
+  %{items: [75, 80, 50, 73, 88], op: &(&1 + 3), div: 5, true: 6, false: 0},
+  %{items: [59, 72, 99, 87, 91, 81], op: &(&1 * 17), div: 11, true: 2, false: 3},
+  %{items: [86, 69], op: &(&1 + 6), div: 3, true: 1, false: 0},
+  %{items: [91], op: &(&1 + 1), div: 19, true: 2, false: 5}
+]
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+[
+  %{div: 13, false: 7, items: 'TH:3', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 1},
+  %{div: 2, false: 5, items: 'X::', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 7},
+  %{div: 7, false: 4, items: ']RGMS5GY', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 3},
+  %{div: 17, false: 6, items: 'QDAQIM`', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 4},
+  %{div: 5, false: 0, items: 'KP2IX', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 6},
+  %{div: 11, false: 3, items: ';HcW[Q', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 2},
+  %{div: 3, false: 0, items: 'VE', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 1},
+  %{div: 19, false: 5, items: '[', op: #Function<42.3316493/1 in :erl_eval.expr/6>, true: 2}
+]
+```
+
+```elixir
+defmodule Monkeys1e do
+  def eval(monkeys, n \\ 1)
+
+  def eval(monkeys, 21) do
+    monkeys
+    |> Enum.map(& &1.count)
+    |> Enum.sort(:desc)
+    |> Enum.take(2)
+    |> Enum.product()
+  end
+
+  def eval(monkeys, n) do
+    monkeys =
+      for i <- 0..(length(monkeys) - 1), reduce: monkeys do
+        m -> eval_single(m, i)
+      end
+
+    eval(monkeys, n + 1)
+  end
+
+  def eval_single(monkeys, i) do
+    monkey = Enum.at(monkeys, i)
+
+    monkeys =
+      monkeys
+      |> put_in([Access.at(i), :items], [])
+      |> update_in([Access.at(i), :count], &(&1 + length(monkey.items)))
+
+    for item <- monkey.items, reduce: monkeys do
+      monkeys ->
+        item =
+          item
+          |> monkey.op.()
+          |> div(3)
+
+        case rem(item, monkey.div) do
+          0 -> pass_to(monkeys, item, monkey.true)
+          _ -> pass_to(monkeys, item, monkey.false)
+        end
+    end
+  end
+
+  def pass_to(monkeys, item, i) do
+    update_in(monkeys, [Access.at(i), :items], &(&1 ++ [item]))
+  end
+end
+
+monkeys
+|> Enum.map(&Map.put(&1, :count, 0))
+|> Monkeys1e.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+55458
+```
+
+## Part 2
+
+```elixir
+defmodule Monkeys2d do
+  def eval(monkeys) do
+    mod = monkeys |> Enum.map(& &1.div) |> Enum.product()
+
+    monkeys
+    |> Enum.map(&Map.put(&1, :count, 0))
+    |> eval(mod, 1)
+  end
+
+  def eval(monkeys, _mod, 10001) do
+    monkeys
+    |> Enum.map(& &1.count)
+    |> Enum.sort(:desc)
+    |> Enum.take(2)
+    |> Enum.product()
+  end
+
+  def eval(monkeys, mod, n) do
+    monkeys =
+      for i <- 0..(length(monkeys) - 1), reduce: monkeys do
+        m -> eval_single(m, mod, i)
+      end
+
+    eval(monkeys, mod, n + 1)
+  end
+
+  def eval_single(monkeys, mod, i) do
+    monkey = Enum.at(monkeys, i)
+
+    monkeys =
+      monkeys
+      |> put_in([Access.at(i), :items], [])
+      |> update_in([Access.at(i), :count], &(&1 + length(monkey.items)))
+
+    for item <- monkey.items, reduce: monkeys do
+      monkeys ->
+        item =
+          item
+          |> monkey.op.()
+          # |> div(3)
+          |> rem(mod)
+
+        if rem(item, monkey.div) == 0,
+          do: pass_to(monkeys, item, monkey.true),
+          else: pass_to(monkeys, item, monkey.false)
+    end
+  end
+
+  def pass_to(monkeys, item, i) do
+    update_in(monkeys, [Access.at(i), :items], &(&1 ++ [item]))
+  end
+end
+
+monkeys
+|> Monkeys2d.eval()
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+14508081294
+```
